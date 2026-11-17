@@ -1,0 +1,43 @@
+# Two interchangeable MongoDB-compatible backends for the same application.
+#
+# DocumentDB Local is the equivalent of:
+#   docker run -dt --pull always --name documentdb \
+#     -p 127.0.0.1:10260:10260 \
+#     -e USERNAME='<YOUR_USERNAME>' \
+#     -e PASSWORD='<YOUR_PASSWORD>' \
+#     ghcr.io/documentdb/documentdb/documentdb-local:latest
+#
+# Usage:
+#   cp .env.example .env        # then edit the credentials
+#   docker compose up -d                                   # DocumentDB only
+#   docker compose --profile mongodb up -d mongodb        # MongoDB only
+#   docker compose --profile mongodb up -d                # both at once
+#   docker compose logs -f
+#
+# Both services use the SAME USERNAME / PASSWORD from .env, so switching the
+# app's DB_BACKEND flag is the only change needed. Ports are loopback-only.
+
+services:
+  documentdb:
+    image: ghcr.io/documentdb/documentdb/documentdb-local:latest
+    container_name: documentdb
+    pull_policy: always # --pull always
+    ports:
+      - "127.0.0.1:10260:10260"
+    environment:
+      USERNAME: ${USERNAME:?set USERNAME in .env}
+      PASSWORD: ${PASSWORD:?set PASSWORD in .env}
+    tty: true # -t
+
+  # Official MongoDB Community Server (standalone, no TLS by default).
+  # Profile-gated so a plain `docker compose up -d` stays backward compatible.
+  mongodb:
+    image: mongo:8
+    container_name: mongodb
+    profiles: ["mongodb"]
+    ports:
+      - "127.0.0.1:27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${USERNAME:?set USERNAME in .env}
+      MONGO_INITDB_ROOT_PASSWORD: ${PASSWORD:?set PASSWORD in .env}
+    tty: true
